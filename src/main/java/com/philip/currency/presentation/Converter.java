@@ -4,7 +4,6 @@ import com.philip.currency.domain.Currency;
 
 public class Converter {
     public static double ConvertCurrency(double amount, Currency from, Currency to){
-        double toBase = amount * from.getRate();
-        return toBase * to.getRate();
+        return amount/from.getRate() * to.getRate();
     }
 }

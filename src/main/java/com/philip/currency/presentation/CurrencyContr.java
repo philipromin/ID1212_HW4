@@ -21,6 +21,7 @@ public class CurrencyContr {
 		service.addCurrency(new Currency(0.76, "GBP"));
 		service.addCurrency(new Currency(108, "JPY"));
 	}
+	
 	@GetMapping("/")
     public String home(Model model){
 		model.addAttribute("conversionForm", new ConversionForm());

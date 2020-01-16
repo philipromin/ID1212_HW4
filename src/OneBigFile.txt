@@ -1,0 +1,206 @@
+package com.philip.currency;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+
+@SpringBootApplication
+public class App {
+    public static void main(String[] args) {
+        SpringApplication.run(App.class);
+    }
+}
+
+package com.philip.currency.repository;
+
+import org.springframework.data.repository.CrudRepository;
+import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
+
+import com.philip.currency.domain.Currency;
+
+@Repository
+public interface CurrencyRepo extends CrudRepository<Currency, Long> {
+	@Transactional
+	Currency findByName(String name);
+}
+
+package com.philip.currency.presentation;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+
+import com.philip.currency.application.CurrencyService;
+import com.philip.currency.domain.Currency;
+
+@Controller
+public class CurrencyContr {
+    private CurrencyService service;
+	
+	@Autowired
+	public CurrencyContr(CurrencyService service) {
+		this.service = service;
+		service.addCurrency(new Currency(1, "USD"));
+		service.addCurrency(new Currency(0.89, "EUR"));
+		service.addCurrency(new Currency(0.76, "GBP"));
+		service.addCurrency(new Currency(108, "JPY"));
+	}
+	
+	@GetMapping("/")
+    public String home(Model model){
+		model.addAttribute("conversionForm", new ConversionForm());
+		model.addAttribute("currencies", service.getCurrencies());
+        return "home";
+    }
+	
+	@PostMapping("/convert")
+	public String convert(ConversionForm conversionForm, Model model){
+		Currency from = service.getCurrency(conversionForm.getFrom());
+		Currency to = service.getCurrency(conversionForm.getTo());
+		double amount = conversionForm.getAmount();
+		
+		double result = Converter.ConvertCurrency(amount, from, to);
+		model.addAttribute("result", result);
+		model.addAttribute("currencies", service.getCurrencies());
+
+		return "home";		
+	}
+}
+
+package com.philip.currency.presentation;
+
+import com.philip.currency.domain.Currency;
+
+public class Converter {
+    public static double ConvertCurrency(double amount, Currency from, Currency to){
+        return amount/from.getRate() * to.getRate();
+    }
+}
+
+package com.philip.currency.presentation;
+
+public class ConversionForm {
+	private String from;
+	private String to;
+	private double amount;
+	
+	public String getFrom() {
+		return from;
+	}
+	public void setFrom(String from) {
+		this.from = from;
+	}
+	public String getTo() {
+		return to;
+	}
+	public void setTo(String to) {
+		this.to = to;
+	}
+	public double getAmount() {
+		return amount;
+	}
+	public void setAmount(double amount) {
+		this.amount = amount;
+	}
+}
+
+package com.philip.currency.domain;
+
+public class Conversion {
+	private String from;
+	private String to;
+	private double amount;
+	
+	public String getFrom() {
+		return from;
+	}
+	public void setFrom(String from) {
+		this.from = from;
+	}
+	public String getTo() {
+		return to;
+	}
+	public void setTo(String to) {
+		this.to = to;
+	}
+	public double getAmount() {
+		return amount;
+	}
+	public void setAmount(double amount) {
+		this.amount = amount;
+	}
+}
+
+package com.philip.currency.domain;
+
+import javax.persistence.Entity;
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
+import javax.persistence.Id;
+import javax.persistence.Table;
+
+@Entity
+@Table(name = "currency")
+public class Currency {
+	@Id @GeneratedValue(strategy = GenerationType.IDENTITY) private long id;
+    private double rate;
+    private String name;
+    protected Currency(){}
+
+    public Currency(double rate, String name) {
+        this.rate = rate;
+        this.name = name;
+    }
+    
+	public double getRate() {
+		return rate;
+	}
+	public void setRate(double rate) {
+		this.rate = rate;
+	}
+	public String getName() {
+		return name;
+	}
+	public void setName(String name) {
+		this.name = name;
+	}
+}
+
+package com.philip.currency.application;
+
+import java.util.ArrayList;
+import java.util.List;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import com.philip.currency.domain.Currency;
+import com.philip.currency.repository.CurrencyRepo;
+
+import org.springframework.transaction.annotation.Propagation;
+
+
+@Transactional(rollbackFor = Exception.class, propagation = Propagation.REQUIRES_NEW)
+@Service
+public class CurrencyService {
+	@Autowired
+	private CurrencyRepo repository;
+	 
+    public Currency getCurrency(String name){
+    	return repository.findByName(name);
+    }
+    
+    public List<Currency> getCurrencies(){
+        List<Currency> currencies = new ArrayList<Currency>();
+        repository.findAll().forEach(currencies::add);
+        return currencies;
+    }
+    
+    public void addCurrency(Currency currency) {
+    	repository.save(currency);
+    }
+}
+
